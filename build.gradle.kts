@@ -27,6 +27,12 @@ repositories {
 intellijPlatform {
     pluginConfiguration {
         name = properties("pluginName")
+        version = properties("pluginVersion")
+
+        ideaVersion {
+            sinceBuild = properties("pluginSinceBuild")
+            untilBuild = provider { null } // Specify no latest build
+        }
     }
 
     pluginVerification {
@@ -74,9 +80,6 @@ tasks {
     }
 
     patchPluginXml {
-        pluginVersion = properties("pluginVersion")
-        sinceBuild = properties("pluginSinceBuild")
-
         // Extract the <!-- Plugin description --> section from README.md and provide for the plugin's manifest
         pluginDescription.set(
             projectDir.resolve("README.md").readText().lines().run {
