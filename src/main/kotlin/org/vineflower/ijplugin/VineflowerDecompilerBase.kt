@@ -88,7 +88,7 @@ abstract class VineflowerDecompilerBase : ClassFileDecompilers.Full() {
         }
     }
 
-    override fun createFileViewProvider(file: VirtualFile, manager: PsiManager, physical: Boolean) =
+    override fun createFileViewProvider(file: VirtualFile, manager: PsiManager, physical: Boolean): FileViewProvider =
         MyFileViewProvider(manager, file, physical)
 
     abstract fun createDecompiledFile(viewProvider: FileViewProvider, contents: ResettableLazy<String>): PsiFile
