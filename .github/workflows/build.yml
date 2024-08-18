@@ -53,7 +53,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: zulu
-          java-version: 11
+          java-version: 17
           cache: gradle
 
       # Set environment variables
@@ -78,13 +78,9 @@ jobs:
       - name: Run Tests
         run: ./gradlew test
 
-      # Run verifyPlugin Gradle task
+      # Run IntelliJ Plugin Verifier
       - name: Verify Plugin
-        run: ./gradlew verifyPlugin
-
-      # Run IntelliJ Plugin Verifier action using GitHub Action
-      - name: Run Plugin Verifier
-        run: ./gradlew runPluginVerifier -Pplugin.verifier.home.dir=${{ steps.properties.outputs.pluginVerifierHomeDir }}
+        run: ./gradlew verifyPlugin -Pplugin.verifier.home.dir=${{ steps.properties.outputs.pluginVerifierHomeDir }}
 
   # Build plugin with buildPlugin Gradle task and provide the artifact for the next workflow jobs
   # Requires test job to be passed
@@ -106,7 +102,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: zulu
-          java-version: 11
+          java-version: 17
           cache: gradle
 
       # Set environment variables

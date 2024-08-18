@@ -7,7 +7,6 @@ import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.util.JDOMUtil
-import com.intellij.util.io.readText
 import com.intellij.util.text.SemVer
 import com.intellij.util.xmlb.XmlSerializerUtil
 import com.intellij.util.xmlb.annotations.Tag
@@ -25,6 +24,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.stream.Collectors
 import kotlin.io.path.exists
+import kotlin.io.path.readText
 
 @State(
     name = "net.earthcomputer.quiltflowerintellij.QuiltflowerState",

@@ -3,7 +3,6 @@ package org.vineflower.ijplugin
 import com.intellij.execution.filters.LineNumbersMapping
 import com.intellij.ide.highlighter.JavaClassFileType
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.DumbService
@@ -125,50 +124,50 @@ class VineflowerInvoker(classLoader: ClassLoader) {
             baseDecompilerDecompileContext.invoke(decompiler)
         }
 
-        // invoke the decompiler
-        if (ApplicationManager.getApplication().isWriteAccessAllowed) {
-            // Read actions from within the decompiler may create a deadlock, as the decompiler itself creates threads.
-            // Solve this problem by running the decompiler on a separate thread, and executing read actions on this
-            // thread, which has write access and therefore read access.
+        // Invoke the decompiler
+        // Read actions from the same thread as the decompiler's main thread may create a deadlock.
+        // The reasoning is hard to figure out, but it seems to be related to threading done by the decompiler.
+        // As a fix, run the main decompiler thread separately and queue reads to be done on the main thread instead.
+        // TODO: Investigate the deadlock issue further
 
-            val decompileFuture = CompletableFuture<Unit>()
-            val queue = LinkedBlockingQueue<() -> Unit>()
+        val decompileFuture = CompletableFuture<Unit>()
+        val queue = LinkedBlockingQueue<() -> Unit>()
+        val canReadOnOwn = ApplicationManager.getApplication().isReadAccessAllowed
 
-            ApplicationManager.getApplication().executeOnPooledThread {
-                try {
-                    doDecompile { readTask ->
-                        val future = CompletableFuture<Unit>()
-                        queue.add {
-                            try {
+        ApplicationManager.getApplication().executeOnPooledThread {
+            try {
+                doDecompile { readTask ->
+                    val future = CompletableFuture<Unit>()
+                    queue.add {
+                        try {
+                            if (canReadOnOwn) {
                                 readTask()
-                                future.complete(Unit)
-                            } catch (e: Throwable) {
-                                future.completeExceptionally(e)
+                            } else {
+                                ApplicationManager.getApplication().runReadAction(readTask)
                             }
-
+                            future.complete(Unit)
+                        } catch (e: Throwable) {
+                            future.completeExceptionally(e)
                         }
-                        future.join()
-                    }
 
-                    queue.add {
-                        decompileFuture.complete(Unit)
                     }
-                } catch (e: Throwable) {
-                    queue.add {
-                        decompileFuture.completeExceptionally(e)
-                    }
+                    future.join()
+                }
+
+                queue.add {
+                    decompileFuture.complete(Unit)
+                }
+            } catch (e: Throwable) {
+                queue.add {
+                    decompileFuture.completeExceptionally(e)
                 }
             }
-
-            while (!decompileFuture.isDone) {
-                queue.take()()
-            }
-            decompileFuture.join()
-        } else {
-            doDecompile {
-                ReadAction.run<Throwable>(it)
-            }
         }
+
+        while (!decompileFuture.isDone) {
+            queue.take()()
+        }
+        decompileFuture.join()
 
         // extract line mappings
         val mapping = myResultSaverMapping.get(resultSaver) as IntArray?
@@ -234,7 +233,7 @@ class VineflowerInvoker(classLoader: ClassLoader) {
         val baseDecompilerAddLibraryMethod = baseDecompilerClass.getMethod("addLibrary", iContextSourceClass)
     }
 
-    private class LanguageFeature(classLoader: ClassLoader) {
+    private inner class LanguageFeature(classLoader: ClassLoader) {
         private val dataInputFullStreamClass = classLoader.loadClass("org.jetbrains.java.decompiler.util.DataInputFullStream")
         private val dataInputFullStreamCtor = dataInputFullStreamClass.getConstructor(ByteArray::class.java)
 
@@ -245,15 +244,38 @@ class VineflowerInvoker(classLoader: ClassLoader) {
         private val getCurrentPluginContext = pluginContextClass.getMethod("getCurrentContext")
         private val pluginContextGetLanguageSpec = pluginContextClass.getMethod("getLanguageSpec", structClassClass)
 
-        private val languageSpecClass = classLoader.loadClass("org.jetbrains.java.decompiler.api.language.LanguageSpec")
+        private val languageSpecClass = classLoader.loadClass("org.jetbrains.java.decompiler.api.plugin.LanguageSpec")
         private val languageSpecName = languageSpecClass.getField("name")
 
+        private val clearContext = baseDecompilerClass.getMethod("clearContext")
+
+        private val getCurrentDecompContext = classLoader.loadClass("org.jetbrains.java.decompiler.main.DecompilerContext")
+            .getMethod("getCurrentContext")
+
         fun getLanguage(bytes: ByteArray): String {
-            val inputStream = dataInputFullStreamCtor.newInstance(bytes)
-            val structClass = structClassCreate.invoke(null, inputStream, true)
-            val pluginContext = getCurrentPluginContext.invoke(null)
-            val languageSpec = pluginContextGetLanguageSpec.invoke(pluginContext, structClass) ?: return "java"
-            return languageSpecName.get(languageSpec) as String
+            // ensure a decompilation context is available (otherwise the structclass constructor will fail)
+            val ff: Any?
+            if (getCurrentDecompContext.invoke(null) == null) {
+                val empty = emptyMap<Nothing, Nothing>()
+                val bytecodeProvider = myBytecodeProviderCtor.newInstance(empty)
+                val resultSaver = myResultSaverCtor.newInstance()
+
+                ff = baseDecompilerCtor.newInstance(bytecodeProvider, resultSaver, empty, myLogger)
+            } else {
+                ff = null
+            }
+
+            try {
+                val inputStream = dataInputFullStreamCtor.newInstance(bytes)
+                val structClass = structClassCreate.invoke(null, inputStream, true)
+                val pluginContext = getCurrentPluginContext.invoke(null)
+                val languageSpec = pluginContextGetLanguageSpec.invoke(pluginContext, structClass) ?: return "java"
+                return languageSpecName.get(languageSpec) as String
+            } finally {
+                if (ff != null) {
+                    clearContext.invoke(ff)
+                }
+            }
         }
     }
 }
