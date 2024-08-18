@@ -18,7 +18,6 @@ import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.stubs.KotlinFileStub
 import org.jetbrains.kotlin.psi.stubs.KotlinImportDirectiveStub
 
-// TODO: full decompilers
 class VineflowerDecompilerKotlin : VineflowerDecompilerBase() {
     private val myStubBuilder = StubBuilder()
 

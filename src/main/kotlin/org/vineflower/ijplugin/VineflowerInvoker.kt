@@ -59,7 +59,7 @@ class VineflowerInvoker(classLoader: ClassLoader) {
         )
 
 
-    private val baseDecompilerClass = classLoader.loadClass("org.jetbrains.java.decompiler.main.Fernflower")
+    private val baseDecompilerClass = classLoader.loadClass("org.jetbrains.java.decompiler.main.decompiler.BaseDecompiler")
     private val baseDecompilerCtor = baseDecompilerClass.getConstructor(
         classLoader.loadClass("org.jetbrains.java.decompiler.main.extern.IBytecodeProvider"),
         classLoader.loadClass("org.jetbrains.java.decompiler.main.extern.IResultSaver"),
@@ -124,10 +124,11 @@ class VineflowerInvoker(classLoader: ClassLoader) {
             baseDecompilerDecompileContext.invoke(decompiler)
         }
 
-        // invoke the decompiler
-        // Read actions from within the decompiler may create a deadlock, as the decompiler itself creates threads.
-        // Solve this problem by running the decompiler on a separate thread, and executing read actions on either
-        // this thread if given read access, or with a read action if not.
+        // Invoke the decompiler
+        // Read actions from the same thread as the decompiler's main thread may create a deadlock.
+        // The reasoning is hard to figure out, but it seems to be related to threading done by the decompiler.
+        // As a fix, run the main decompiler thread separately and queue reads to be done on the main thread instead.
+        // TODO: Investigate the deadlock issue further
 
         val decompileFuture = CompletableFuture<Unit>()
         val queue = LinkedBlockingQueue<() -> Unit>()

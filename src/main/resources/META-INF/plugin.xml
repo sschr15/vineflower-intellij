@@ -21,7 +21,6 @@
                 displayName="Vineflower"/>
         <applicationService serviceImplementation="org.vineflower.ijplugin.VineflowerState"/>
         <psi.classFileDecompiler implementation="org.vineflower.ijplugin.VineflowerDecompilerLight" order="first"/>
-<!--        <psi.classFileDecompiler implementation="org.vineflower.ijplugin.VineflowerDecompilerJava" order="first"/>-->
         <psi.classFileDecompiler implementation="org.vineflower.ijplugin.VineflowerDecompilerKotlin" order="first"/>
     </extensions>
 </idea-plugin>
