@@ -63,7 +63,8 @@ abstract class VineflowerDecompilerBase : ClassFileDecompilers.Full() {
         if (!state.enabled || state.hadError) {
             return false
         }
-        val language = getLanguage(file) ?: return false
+        val language = getLanguage(file)
+            ?: return false
         return acceptsLanguage(language)
     }
 

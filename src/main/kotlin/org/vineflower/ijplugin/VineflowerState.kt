@@ -195,12 +195,13 @@ class VineflowerState : PersistentStateComponent<VineflowerState> {
             "$newReleaseBaseUrl$version/vineflower-$version.jar"
         } else if (version in vineflowerVersions.oldReleases) {
             "$legacyReleaseBaseUrl$version/quiltflower-$version.jar"
-        } else if (version in vineflowerVersions.newSnapshots) {
-            val snapshotVersion = version.toString().substringBefore("-") + "-SNAPSHOT"
-            "$newSnapshotsBaseUrl$snapshotVersion/vineflower-$version.jar"
-        } else {
+        } else if (version in vineflowerVersions.oldSnapshots) {
+            // Check explicitly for legacy snapshots, as new snapshots may show up unexpectedly whereas there are no new legacy snapshots
             val snapshotVersion = version.toString().substringBefore("-") + "-SNAPSHOT"
             "$legacySnapshotsBaseUrl$snapshotVersion/quiltflower-$version.jar"
+        } else {
+            val snapshotVersion = version.toString().substringBefore("-") + "-SNAPSHOT"
+            "$newSnapshotsBaseUrl$snapshotVersion/vineflower-$version.jar"
         }
 
         // setup the connection and connect

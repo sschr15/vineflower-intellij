@@ -90,8 +90,8 @@ class VineflowerInvoker(classLoader: ClassLoader) {
 
         // gather the options, enforce overrides
         val options = VineflowerState.getInstance().vineflowerSettings.toMutableMap()
-        options.keys.removeAll(VineflowerPreferences.ignoredPreferences)
-        for ((k, v) in VineflowerPreferences.defaultOverrides) {
+        options.keys.removeAll(ClassicVineflowerPreferences.ignoredPreferences)
+        for ((k, v) in ClassicVineflowerPreferences.defaultOverrides) {
             options.putIfAbsent(k, v.toString())
         }
         options.compute("ind") { _, v -> if (v == null) null else " ".repeat(v.toInt()) } // indent
@@ -247,35 +247,24 @@ class VineflowerInvoker(classLoader: ClassLoader) {
         private val languageSpecClass = classLoader.loadClass("org.jetbrains.java.decompiler.api.plugin.LanguageSpec")
         private val languageSpecName = languageSpecClass.getField("name")
 
-        private val clearContext = baseDecompilerClass.getMethod("clearContext")
-
         private val getCurrentDecompContext = classLoader.loadClass("org.jetbrains.java.decompiler.main.DecompilerContext")
             .getMethod("getCurrentContext")
 
         fun getLanguage(bytes: ByteArray): String {
             // ensure a decompilation context is available (otherwise the structclass constructor will fail)
-            val ff: Any?
             if (getCurrentDecompContext.invoke(null) == null) {
                 val empty = emptyMap<Nothing, Nothing>()
                 val bytecodeProvider = myBytecodeProviderCtor.newInstance(empty)
                 val resultSaver = myResultSaverCtor.newInstance()
 
-                ff = baseDecompilerCtor.newInstance(bytecodeProvider, resultSaver, empty, myLogger)
-            } else {
-                ff = null
+                baseDecompilerCtor.newInstance(bytecodeProvider, resultSaver, empty, myLogger)
             }
 
-            try {
-                val inputStream = dataInputFullStreamCtor.newInstance(bytes)
-                val structClass = structClassCreate.invoke(null, inputStream, true)
-                val pluginContext = getCurrentPluginContext.invoke(null)
-                val languageSpec = pluginContextGetLanguageSpec.invoke(pluginContext, structClass) ?: return "java"
-                return languageSpecName.get(languageSpec) as String
-            } finally {
-                if (ff != null) {
-                    clearContext.invoke(ff)
-                }
-            }
+            val inputStream = dataInputFullStreamCtor.newInstance(bytes)
+            val structClass = structClassCreate.invoke(null, inputStream, true)
+            val pluginContext = getCurrentPluginContext.invoke(null)
+            val languageSpec = pluginContextGetLanguageSpec.invoke(pluginContext, structClass) ?: return "java"
+            return languageSpecName.get(languageSpec) as String
         }
     }
 }
