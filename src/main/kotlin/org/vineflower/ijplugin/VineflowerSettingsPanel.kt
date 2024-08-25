@@ -10,7 +10,13 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.text.SemVer
 import com.intellij.util.ui.AsyncProcessIcon
 import java.awt.FlowLayout
-import javax.swing.*
+import java.util.TreeMap
+import java.util.TreeSet
+import javax.swing.BoxLayout
+import javax.swing.ComboBoxModel
+import javax.swing.JCheckBox
+import javax.swing.JLabel
+import javax.swing.JPanel
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 
@@ -32,7 +38,6 @@ class VineflowerSettingsPanel(var prevVineflowerVersion: SemVer?) {
 
     init {
         pluginSettingsPanel.border = IdeBorderFactory.createTitledBorder("Plugin Settings")
-//        vineflowerSettingsPanel.border = IdeBorderFactory.createTitledBorder("Vineflower Settings")
         vineflowerSettingsPanel.layout = BoxLayout(vineflowerSettingsPanel, BoxLayout.Y_AXIS)
 
         refreshVineflowerSettings()
@@ -65,16 +70,15 @@ class VineflowerSettingsPanel(var prevVineflowerVersion: SemVer?) {
         val allSettings = mutableListOf<VineflowerPreferences.SettingsEntry>()
         preferences.setupSettings(allSettings, vineflowerSettings)
 
-        val groups = allSettings.groupBy { it.group }
-        val keys = groups.keys.sortedBy { it }
+        val groups = allSettings.groupByTo(TreeMap(compareBy { it })) { it.group }
 
         var groupPanel: JPanel
-        for (key in keys) {
+        for ((group, entries) in groups) {
             groupPanel = JPanel(FlowLayout(FlowLayout.LEFT))
-            groupPanel.border = IdeBorderFactory.createTitledBorder(key ?: "Vineflower Settings")
+            groupPanel.border = IdeBorderFactory.createTitledBorder(group ?: "Vineflower Settings")
             groupPanel.layout = BoxLayout(groupPanel, BoxLayout.Y_AXIS)
 
-            for (entry in groups[key]!!) {
+            for (entry in entries) {
                 val panel = JPanel(FlowLayout(FlowLayout.LEFT))
                 if (entry.component is JCheckBox) {
                     panel.add(entry.component)

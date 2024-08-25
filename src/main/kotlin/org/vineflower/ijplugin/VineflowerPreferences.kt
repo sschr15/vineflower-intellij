@@ -1,7 +1,6 @@
 package org.vineflower.ijplugin
 
-import com.jetbrains.rd.util.error
-import com.jetbrains.rd.util.getLogger
+import com.intellij.openapi.diagnostic.logger
 import javax.swing.JComponent
 
 abstract class VineflowerPreferences {
@@ -22,7 +21,7 @@ abstract class VineflowerPreferences {
         fun create(): VineflowerPreferences = try {
             NewVineflowerPreferences()
         } catch (e: Throwable) {
-            getLogger<VineflowerPreferences>().error("Failed to create new preferences, falling back to classic", e)
+            logger<VineflowerPreferences>().warn("Failed to create new preferences, falling back to classic", e)
             ClassicVineflowerPreferences
         }
     }

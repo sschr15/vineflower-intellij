@@ -72,6 +72,6 @@ class VineflowerDecompilerKotlin : VineflowerDecompilerBase() {
     private class MyDecompiledFile(viewProvider: KotlinDecompiledFileViewProvider, contents: (VirtualFile) -> DecompiledText) : KtDecompiledFile(viewProvider, contents) {
         override fun getStub() = stubTree?.root as KotlinFileStub?
 
-        override fun toString(): String = toString().replace("KtFile", "VfDecompiledFile")
+        override fun toString(): String = super.toString().replace("KtFile", "VfDecompiledFile")
     }
 }
