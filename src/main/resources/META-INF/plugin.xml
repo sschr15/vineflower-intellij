@@ -23,4 +23,10 @@
         <psi.classFileDecompiler implementation="org.vineflower.ijplugin.VineflowerDecompilerLight" order="first"/>
         <psi.classFileDecompiler implementation="org.vineflower.ijplugin.VineflowerDecompilerKotlin" order="first"/>
     </extensions>
+
+    <extensions defaultExtensionNs="org.jetbrains.kotlin">
+        <!-- Two different forms of "supports K2" are needed because the plugin changed its lookup method -->
+        <supportsKotlinPluginMode supportsK1="true" supportsK2="true"/>
+        <supportsKotlinK2Mode/>
+    </extensions>
 </idea-plugin>
