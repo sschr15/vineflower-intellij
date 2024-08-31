@@ -251,20 +251,25 @@ class VineflowerInvoker(classLoader: ClassLoader) {
             .getMethod("getCurrentContext")
 
         fun getLanguage(bytes: ByteArray): String {
-            // ensure a decompilation context is available (otherwise the structclass constructor will fail)
-            if (getCurrentDecompContext.invoke(null) == null) {
-                val empty = emptyMap<Nothing, Nothing>()
-                val bytecodeProvider = myBytecodeProviderCtor.newInstance(empty)
-                val resultSaver = myResultSaverCtor.newInstance()
+            try {
+                // ensure a decompilation context is available (otherwise the structclass constructor will fail)
+                if (getCurrentDecompContext.invoke(null) == null) {
+                    val empty = emptyMap<Nothing, Nothing>()
+                    val bytecodeProvider = myBytecodeProviderCtor.newInstance(empty)
+                    val resultSaver = myResultSaverCtor.newInstance()
 
-                baseDecompilerCtor.newInstance(bytecodeProvider, resultSaver, empty, myLogger)
+                    baseDecompilerCtor.newInstance(bytecodeProvider, resultSaver, empty, myLogger)
+                }
+
+                val inputStream = dataInputFullStreamCtor.newInstance(bytes)
+                val structClass = structClassCreate.invoke(null, inputStream, true)
+                val pluginContext = getCurrentPluginContext.invoke(null)
+                val languageSpec = pluginContextGetLanguageSpec.invoke(pluginContext, structClass) ?: return "java"
+                return languageSpecName.get(languageSpec) as String
+            } catch (e: Throwable) {
+                LOGGER.warn("Failed to determine language of class file", e)
+                return "java"
             }
-
-            val inputStream = dataInputFullStreamCtor.newInstance(bytes)
-            val structClass = structClassCreate.invoke(null, inputStream, true)
-            val pluginContext = getCurrentPluginContext.invoke(null)
-            val languageSpec = pluginContextGetLanguageSpec.invoke(pluginContext, structClass) ?: return "java"
-            return languageSpecName.get(languageSpec) as String
         }
     }
 }
