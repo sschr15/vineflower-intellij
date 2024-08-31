@@ -3,7 +3,6 @@ package org.vineflower.ijplugin
 import com.intellij.execution.filters.LineNumbersMapping
 import com.intellij.ide.highlighter.JavaClassFileType
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.diagnostic.ControlFlowException
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.DumbService
@@ -251,30 +250,26 @@ class VineflowerInvoker(classLoader: ClassLoader) {
         private val getCurrentDecompContext = classLoader.loadClass("org.jetbrains.java.decompiler.main.DecompilerContext")
             .getMethod("getCurrentContext")
 
-        fun getLanguage(bytes: ByteArray): String {
-            try {
-                // ensure a decompilation context is available (otherwise the structclass constructor will fail)
-                if (getCurrentDecompContext.invoke(null) == null) {
-                    val empty = emptyMap<Nothing, Nothing>()
-                    val bytecodeProvider = myBytecodeProviderCtor.newInstance(empty)
-                    val resultSaver = myResultSaverCtor.newInstance()
-
-                    baseDecompilerCtor.newInstance(bytecodeProvider, resultSaver, empty, myLogger)
-                }
-
-                val inputStream = dataInputFullStreamCtor.newInstance(bytes)
-                val structClass = structClassCreate.invoke(null, inputStream, true)
-                val pluginContext = getCurrentPluginContext.invoke(null)
-                val languageSpec = pluginContextGetLanguageSpec.invoke(pluginContext, structClass) ?: return "java"
-                return languageSpecName.get(languageSpec) as String
-            } catch (e: Throwable) {
-                if (e is ControlFlowException) {
-                    throw e
-                }
-
-                LOGGER.warn("Failed to determine language of class file", e)
-                return "java"
+        fun getLanguage(bytes: ByteArray): String? {
+            if (bytes.take(4) != listOf(0xCA, 0xFE, 0xBA, 0xBE).map { it.toByte() }.toByteArray()) {
+                // Non-class file
+                return null
             }
+
+            // ensure a decompilation context is available (otherwise the structclass constructor will fail)
+            if (getCurrentDecompContext.invoke(null) == null) {
+                val empty = emptyMap<Nothing, Nothing>()
+                val bytecodeProvider = myBytecodeProviderCtor.newInstance(empty)
+                val resultSaver = myResultSaverCtor.newInstance()
+
+                baseDecompilerCtor.newInstance(bytecodeProvider, resultSaver, empty, myLogger)
+            }
+
+            val inputStream = dataInputFullStreamCtor.newInstance(bytes)
+            val structClass = structClassCreate.invoke(null, inputStream, true)
+            val pluginContext = getCurrentPluginContext.invoke(null)
+            val languageSpec = pluginContextGetLanguageSpec.invoke(pluginContext, structClass) ?: return "java"
+            return languageSpecName.get(languageSpec) as String
         }
     }
 }
