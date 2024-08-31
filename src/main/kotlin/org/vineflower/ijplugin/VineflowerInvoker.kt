@@ -14,6 +14,7 @@ import com.intellij.openapi.vfs.readBytes
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.util.ArrayUtil
 import java.io.File
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.LinkedBlockingQueue
@@ -250,8 +251,10 @@ class VineflowerInvoker(classLoader: ClassLoader) {
         private val getCurrentDecompContext = classLoader.loadClass("org.jetbrains.java.decompiler.main.DecompilerContext")
             .getMethod("getCurrentContext")
 
+        private val cafebabe = listOf(0xCA, 0xFE, 0xBA, 0xBE).map(Int::toByte).toByteArray()
+
         fun getLanguage(bytes: ByteArray): String? {
-            if (bytes.take(4) != listOf(0xCA, 0xFE, 0xBA, 0xBE).map { it.toByte() }) {
+            if (ArrayUtil.startsWith(bytes, cafebabe)) {
                 // Non-class file
                 return null
             }
