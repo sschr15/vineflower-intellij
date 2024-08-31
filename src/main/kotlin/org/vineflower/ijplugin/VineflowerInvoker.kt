@@ -251,7 +251,7 @@ class VineflowerInvoker(classLoader: ClassLoader) {
             .getMethod("getCurrentContext")
 
         fun getLanguage(bytes: ByteArray): String? {
-            if (bytes.take(4) != listOf(0xCA, 0xFE, 0xBA, 0xBE).map { it.toByte() }.toByteArray()) {
+            if (bytes.take(4) != listOf(0xCA, 0xFE, 0xBA, 0xBE).map { it.toByte() }) {
                 // Non-class file
                 return null
             }
