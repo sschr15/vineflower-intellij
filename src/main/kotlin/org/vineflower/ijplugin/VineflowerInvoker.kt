@@ -3,6 +3,7 @@ package org.vineflower.ijplugin
 import com.intellij.execution.filters.LineNumbersMapping
 import com.intellij.ide.highlighter.JavaClassFileType
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.ControlFlowException
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.DumbService
@@ -267,6 +268,10 @@ class VineflowerInvoker(classLoader: ClassLoader) {
                 val languageSpec = pluginContextGetLanguageSpec.invoke(pluginContext, structClass) ?: return "java"
                 return languageSpecName.get(languageSpec) as String
             } catch (e: Throwable) {
+                if (e is ControlFlowException) {
+                    throw e
+                }
+
                 LOGGER.warn("Failed to determine language of class file", e)
                 return "java"
             }
